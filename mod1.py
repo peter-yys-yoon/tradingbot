@@ -15,18 +15,15 @@ KOSPI = 'kospi'
 KOSDAQ = 'kosdaq'
 KONEX = 'konex'
 default_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-
-MARKET_TP={
+empty_formatter = logging.Formatter('')
+MARKET_TP = {
     KOSPI: 'Y',
     KOSDAQ: 'K',
-    KONEX:'N'
+    KONEX: 'N'
 }
-
 
 PROFITLOSS1 = 'ifrs-full_ProfitLoss'
 PROFITLOSS2 = 'ifrs_ProfitLoss'
-
 
 
 def read_csv_dict(datatype=KOSPI):
@@ -56,17 +53,14 @@ def read_csv_dict(datatype=KOSPI):
     return corp_dict
 
 
-
-
-
 class Trimmer:
     def __init__(self):
         api_key = 'd617ec8690f8cafd5d081e00a1501565e137f23e'
         dart.set_api_key(api_key=api_key)
 
-        self.log_notfound = self.setup_logger('log1','notfound.log', formatt='')
-        self.log_notmatch = self.setup_logger('log2','notmatch.log')
-        self.log_noprofit = self.setup_logger('log3','noprofit.log')
+        self.log_notfound = self.setup_logger('log1', 'notfound.log', empty_formatter)
+        self.log_notmatch = self.setup_logger('log2', 'notmatch.log', empty_formatter)
+        self.log_noprofit = self.setup_logger('log3', 'noprofit.log', empty_formatter)
         # self.log_success = self.setup_logger('log4','success.log')
 
     def get_ignore_list(self):
@@ -89,14 +83,11 @@ class Trimmer:
 
         return ignore_list
 
-
-
-    def setup_logger(self, name, log_file, formatt = default_formatter, level=logging.INFO):
+    def setup_logger(self, name, log_file, formatt, level=logging.INFO):
         """To setup as many loggers as you want"""
 
         handler = logging.FileHandler(log_file)
-        if len(formatt):
-            handler.setFormatter(formatt)
+        handler.setFormatter(formatt)
 
         logger = logging.getLogger(name)
         logger.setLevel(level)
@@ -116,11 +107,10 @@ class Trimmer:
                 print(market_corp_code, 'existed, pass')
                 continue
 
-
             try:
-                reports = dart.fs.extract(corp_code = market_corp_code,
+                reports = dart.fs.extract(corp_code=market_corp_code,
                                           bgn_de=begin_date_str
-                                          ,report_tp='quarter'
+                                          , report_tp='quarter'
                                           # ,report_tp='half'
                                           )
 
@@ -129,8 +119,8 @@ class Trimmer:
                 report_cis_col_label = cis_report.to_dict().keys()
                 report_cis_col_label = list(report_cis_col_label)
 
-                first_labels =cis_report[report_cis_col_label[0]] # eng_label
-                eng_labels =cis_report[report_cis_col_label[2]] # eng_label
+                first_labels = cis_report[report_cis_col_label[0]]  # eng_label
+                eng_labels = cis_report[report_cis_col_label[2]]  # eng_label
 
                 # if 'Profit (loss)' not in eng_labels:
                 #     print('No Profit!!')
@@ -138,7 +128,7 @@ class Trimmer:
                 no_label_flag = True
                 target_idx = -1
                 for idx, lab in enumerate(eng_labels):
-                    if lab =='Profit (loss)':
+                    if lab == 'Profit (loss)':
                         no_label_flag = False
                         target_idx = idx
                         # print(idx, first_labels[idx], eng_labels[idx])
@@ -147,8 +137,8 @@ class Trimmer:
                     print('No Profit!!')
                     self.log_noprofit.info(f'{market_corp_code},{market_corp_name}')
                 else:
-                    concept_id= first_labels[target_idx]
-                    if concept_id !='ifrs-full_ProfitLoss':
+                    concept_id = first_labels[target_idx]
+                    if concept_id != 'ifrs-full_ProfitLoss':
                         self.log_notmatch.info(f'{market_corp_code}, {market_corp_name},{concept_id},{eng_labels}')
 
                 reports.save()
@@ -165,9 +155,5 @@ class Trimmer:
                 self.log_notfound.info(f'{market_corp_code},{market_corp_name}')
 
 
-
-
-
-
-trim= Trimmer()
+trim = Trimmer()
 trim.jm_want(market=KOSPI, begin_date_str='20200101')
