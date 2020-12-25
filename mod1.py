@@ -56,20 +56,7 @@ def read_csv_dict(datatype=KOSPI):
     return corp_dict
 
 
-def read_log_files():
 
-    ignore_list = []
-    with open('notfound.log', 'r') as f:
-        aa = f.readlines()
-        ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-    with open('notmatch.log', 'r') as f:
-        aa = f.readlines()
-        ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-    with open('noprofit.log', 'r') as f:
-        aa = f.readlines()
-        ignore_list += [x.rstrip().split(',')[0] for x in aa]
 
 
 class Trimmer:
@@ -82,15 +69,29 @@ class Trimmer:
         self.log_noprofit = self.setup_logger('log3','noprofit.log')
         # self.log_success = self.setup_logger('log4','success.log')
 
-    def get_exists(self):
+    def get_ignore_list(self):
 
-        exist_list = []
+        ignore_list = []
+        with open('notfound.log', 'r') as f:
+            aa = f.readlines()
+            ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
+        with open('notmatch.log', 'r') as f:
+            aa = f.readlines()
+            ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
+        with open('noprofit.log', 'r') as f:
+            aa = f.readlines()
+            ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
         for f in os.listdir('./fsdata'):
             exist_list.append(f.split('_')[0])
 
-        return exist_list
+        return ignore_list
 
-    def setup_logger(self, name, log_file, formatt = formatter, level=logging.INFO):
+
+
+    def setup_logger(self, name, log_file, formatt = default_formatter, level=logging.INFO):
         """To setup as many loggers as you want"""
 
         handler = logging.FileHandler(log_file)
@@ -106,13 +107,12 @@ class Trimmer:
     def jm_want(self, market, begin_date_str):
         market_corp_dict = read_csv_dict(market)
         print(f'{market} has {len(list(market_corp_dict.keys()))} Corps ')
-        existed = self.get_exists()
         # dart_corp_list = dart.get_corp_list()
 
         for market_corp_code in market_corp_dict:
             market_corp_name = market_corp_dict[market_corp_code]
 
-            if market_corp_code in existed:
+            if market_corp_code in get_ignore_list:
                 print(market_corp_code, 'existed, pass')
                 continue
 
