@@ -79,7 +79,7 @@ class Trimmer:
             ignore_list += [x.rstrip().split(',')[0] for x in aa]
 
         for f in os.listdir('./fsdata'):
-            exist_list.append(f.split('_')[0])
+            ignore_list.append(f.split('_')[0])
 
         return ignore_list
 
@@ -98,12 +98,13 @@ class Trimmer:
     def jm_want(self, market, begin_date_str):
         market_corp_dict = read_csv_dict(market)
         print(f'{market} has {len(list(market_corp_dict.keys()))} Corps ')
+        ignore_list = self.get_ignore_list()
         # dart_corp_list = dart.get_corp_list()
 
         for market_corp_code in market_corp_dict:
             market_corp_name = market_corp_dict[market_corp_code]
 
-            if market_corp_code in get_ignore_list:
+            if market_corp_code in ignore_list:
                 print(market_corp_code, 'existed, pass')
                 continue
 
@@ -139,17 +140,17 @@ class Trimmer:
                 else:
                     concept_id = first_labels[target_idx]
                     if concept_id != 'ifrs-full_ProfitLoss':
-                        self.log_notmatch.info(f'{market_corp_code}, {market_corp_name},{concept_id},{eng_labels}')
+                        self.log_notmatch.info(f'{market_corp_code},{market_corp_name},{concept_id},{eng_labels}')
 
                 reports.save()
             except dart.errors.NoDataReceived as e:
-                self.log_notfound.info(f'{market_corp_code}, {market_corp_name} NoDataReceived')
+                self.log_notfound.info(f'{market_corp_code},{market_corp_name},NoDataReceived')
             except dart.errors.NotFoundConsolidated as e:
-                self.log_notfound.info(f'{market_corp_code}, {market_corp_name} NotFoundConsolidated')
+                self.log_notfound.info(f'{market_corp_code},{market_corp_name},NotFoundConsolidated')
             except dart.errors.InvalidField as e:
-                self.log_notfound.info(f'{market_corp_code}, {market_corp_name} InvalidField')
+                self.log_notfound.info(f'{market_corp_code},{market_corp_name},InvalidField')
             except dart.errors.UnknownError as e:
-                self.log_notfound.info(f'{market_corp_code}, {market_corp_name} UnknownError')
+                self.log_notfound.info(f'{market_corp_code},{market_corp_name},UnknownError')
             except RuntimeError as e:
                 print('Runtime Errorrrrrrrrrrrrrrrrrrrrrrrrrrrr')
                 self.log_notfound.info(f'{market_corp_code},{market_corp_name}')
