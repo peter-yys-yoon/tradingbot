@@ -14,7 +14,7 @@ CORP_PROFIT_FLAG_LIST = 'corp_profit_flags'
 KOSPI = 'kospi'
 KOSDAQ = 'kosdaq'
 KONEX = 'konex'
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+default_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 MARKET_TP={
@@ -56,13 +56,28 @@ def read_csv_dict(datatype=KOSPI):
     return corp_dict
 
 
+def read_log_files():
+
+    ignore_list = []
+    with open('notfound.log', 'r') as f:
+        aa = f.readlines()
+        ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
+    with open('notmatch.log', 'r') as f:
+        aa = f.readlines()
+        ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
+    with open('noprofit.log', 'r') as f:
+        aa = f.readlines()
+        ignore_list += [x.rstrip().split(',')[0] for x in aa]
+
 
 class Trimmer:
     def __init__(self):
         api_key = 'd617ec8690f8cafd5d081e00a1501565e137f23e'
         dart.set_api_key(api_key=api_key)
 
-        self.log_notfound = self.setup_logger('log1','notfound.log')
+        self.log_notfound = self.setup_logger('log1','notfound.log', formatt='')
         self.log_notmatch = self.setup_logger('log2','notmatch.log')
         self.log_noprofit = self.setup_logger('log3','noprofit.log')
         # self.log_success = self.setup_logger('log4','success.log')
@@ -74,11 +89,13 @@ class Trimmer:
             exist_list.append(f.split('_')[0])
 
         return exist_list
+
     def setup_logger(self, name, log_file, formatt = formatter, level=logging.INFO):
         """To setup as many loggers as you want"""
 
         handler = logging.FileHandler(log_file)
-        handler.setFormatter(formatter)
+        if len(formatt):
+            handler.setFormatter(formatt)
 
         logger = logging.getLogger(name)
         logger.setLevel(level)
@@ -93,6 +110,7 @@ class Trimmer:
         # dart_corp_list = dart.get_corp_list()
 
         for market_corp_code in market_corp_dict:
+            market_corp_name = market_corp_dict[market_corp_code]
 
             if market_corp_code in existed:
                 print(market_corp_code, 'existed, pass')
@@ -105,7 +123,7 @@ class Trimmer:
                                           ,report_tp='quarter'
                                           # ,report_tp='half'
                                           )
-                market_corp_name = market_corp_dict[market_corp_code]
+
                 print('corp code: ', market_corp_code, ' name:', market_corp_name)
                 cis_report = reports['cis']
                 report_cis_col_label = cis_report.to_dict().keys()
@@ -127,11 +145,11 @@ class Trimmer:
 
                 if no_label_flag:
                     print('No Profit!!')
-                    self.log_noprofit.info(f'{market_corp_code}, {market_corp_name}')
+                    self.log_noprofit.info(f'{market_corp_code},{market_corp_name}')
                 else:
                     concept_id= first_labels[target_idx]
                     if concept_id !='ifrs-full_ProfitLoss':
-                        self.log_notmatch.info(f'{market_corp_code}, {market_corp_name}, {concept_id} != {eng_labels}')
+                        self.log_notmatch.info(f'{market_corp_code}, {market_corp_name},{concept_id},{eng_labels}')
 
                 reports.save()
             except dart.errors.NoDataReceived as e:
@@ -144,7 +162,7 @@ class Trimmer:
                 self.log_notfound.info(f'{market_corp_code}, {market_corp_name} UnknownError')
             except RuntimeError as e:
                 print('Runtime Errorrrrrrrrrrrrrrrrrrrrrrrrrrrr')
-                self.log_notfound.info(f'{market_corp_code}, {market_corp_name} RuntimeError')
+                self.log_notfound.info(f'{market_corp_code},{market_corp_name}')
 
 
 
