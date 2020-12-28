@@ -64,11 +64,64 @@ MARKET_TP = {
 parser = argparse.ArgumentParser(description='wowwowwowwow')
 parser.add_argument('-d', action='store_true')
 parser.add_argument('-e', action='store_true')
+parser.add_argument('-t', action='store_true')
+parser.add_argument('-m', type=str, default='kospi', action='store')
 args = parser.parse_args()
 
 
 
 
+def print_files_status():
+    failed_corp_list = read_all_logs()
+    fsdata_list = get_fsdata_list()
+
+    for market_key in MARKET_TP.keys():
+        market_corp_dict = read_csv_dict(market_key)
+        total_count = len(market_corp_dict)
+        dw_count, fail_count, rest  = 0,0, 0
+
+        for t in market_corp_dict.keys():
+            if t in fsdata_list:
+                dw_count +=1
+            elif t in failed_corp_list:
+                fail_count +=1
+            else:
+                rest += 1
+        print(market_key, 'total:', total_count, 'fsdata:',dw_count, 'failed:',fail_count,'rest:',rest)
+
+
+
+
+
+def read_all_logs():
+    flist = []
+    with open('./logs/notfound.log', 'r') as f:
+        aa = f.readlines()
+        flist += [x.rstrip().split(',')[0] for x in aa]
+
+    with open('./logs/notmatch.log', 'r') as f:
+        aa = f.readlines()
+        flist += [x.rstrip().split(',')[0] for x in aa]
+
+    with open('./logs/noprofit.log', 'r') as f:
+        aa = f.readlines()
+        flist += [x.rstrip().split(',')[0] for x in aa]
+
+    with open('./logs/ignore_list.txt', 'r') as f:
+        aa = f.readlines()
+        flist += [x.rstrip().split(',')[0] for x in aa]
+
+    return flist
+
+def get_fsdata_list():
+    flist = []
+
+    for f in os.listdir('./fsdata'):
+        flist.append(f.split('_')[0])
+    return flist
+
+def get_ignore_list():
+    return get_fsdata_list() + read_all_logs()
 
 
 def read_csv_dict(datatype=KOSPI):
@@ -118,9 +171,8 @@ def vis_profit(_given):
     danwi2 = math.pow(10, 12)  # 조단위
 
     a, b = divmod(given, danwi2)
-    print(_given, '    ', given, 'a:', a, 'b: ', b)
+    # print('_given', '    ', given, 'a:', a, 'b: ', b)
     if a:  # a is not zero :
-
         return f'{int(a) * base:,}조 {int(b / danwi1):,}억원'
     else:
         return f'{int(b * base / danwi1):,}억원'

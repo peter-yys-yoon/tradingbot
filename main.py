@@ -10,12 +10,36 @@ from tqdm import tqdm
 import math
 import calendar
 from wcwidth import wcswidth
+from tools import *
+
+
+def export_result(results):
+    with open(f'result_{args.m}.txt', 'w') as f:
+        headers = [fmt('NAME', 25, 'c'), fmt('CODE', 17, 'c')] + [fmt(COL_NAME_DICT[aa], 17, 'c') for aa in
+                                                                  REPORT_COL_LIST]
+        f.write('|'.join(headers) + '\n')
+        print('|'.join(headers))
+        for rec in results:
+            # rec2 = [fmt(rec[0], 25, 'l'), fmt(rec[1], 17, 'c')] + [fmt(vis_profit(a), 17, 'r') for a in rec[2:]]
+            f.write('|'.join(rec2) + '\n')
+            print('|'.join(rec2))
+
+
+def check_condition(res_row):
+    # res_row = [code, name, v1, v2,... ,vn ]
+    vals = res_row[2:]
+    cod = sum(n < 0 for n in vals)  # count negatives
+    if cod:  # includes negatives
+        return False
+    else:  # all numbers are positive
+        return True
 
 
 def eval():
     fs_data_path = './fsdata'
+    # fs_data_path = './tmp'
 
-    corp_dict = read_csv_dict(KOSPI)
+    corp_dict = read_csv_dict(args.m)
     xlsx_list = os.listdir(fs_data_path)
     results = []
 
@@ -29,6 +53,12 @@ def eval():
         cis_sheet_cols = list(cis_sheet.keys())  # col names
 
         corp_code = ff.split('_')[0]
+
+        # if corp_code != '091810':
+        #     continue
+
+        if corp_code not in corp_dict.keys():
+            continue
         corp_name = corp_dict[corp_code]
 
         profit_idx = -1
@@ -41,7 +71,7 @@ def eval():
 
         if profit_idx < 0:  # No Profit row in table
             continue
-
+        # print(corp_code, corp_name)
         cis_profit_values = [corp_name, corp_code]
         for col_name in REPORT_COL_LIST:  # [ 2020Q3, 2020Q2,....]
             if col_name in cis_sheet_cols:  # if col_name is in the sheet
@@ -49,25 +79,27 @@ def eval():
                     c9, c12 = get_cal(col_name)
                     cis_c12_vals = cis_sheet[c12]  # yearly-amount
                     cis_c9_vals = cis_sheet[c9]  # 3/4 amount
+                    # print('c9', c9, 'c12', c12)
                     profit = cis_c12_vals[profit_idx] - cis_c9_vals[profit_idx]
+                    # cis_profit_values.append(vis_profit(profit))
+                    cis_profit_values.append(profit)
 
                 else:  # Q1, Q2, Q3 case
                     cis_vals = cis_sheet[col_name]
                     profit = cis_vals[profit_idx]
+                    if math.isnan(profit):  # col exists but value is empty
+                        cis_profit_values.append(0)
+                    else:
+                        cis_profit_values.append(profit)
+                        # cis_profit_values.append(vis_profit(profit))
 
-                cis_profit_values.append(vis_profit(profit))
+            else:  # no column in the sheet
+                cis_profit_values.append(0)
 
-            else:  # no data in sheet
-                cis_profit_values.append('  ')
-
-        results.append(cis_profit_values)
+        if check_condition(cis_profit_values):
+            results.append(cis_profit_values)
     name_desc.close()
-
-    headers = [fmt('Name', 17, 'c'), fmt('Code', 17, 'c')] + [fmt(COL_NAME_DICT[aa], 17, 'c') for aa in REPORT_COL_LIST]
-    print('|'.join(headers))
-    for rec in results:
-        rec2 = [fmt(rec[0], 17, 'l'), fmt(rec[1], 17, 'c')] + [fmt(a, 17, 'r') for a in rec[2:]]
-        print('|'.join(rec2))
+    export_result(results)
 
 
 class fsDownloader:
@@ -75,34 +107,10 @@ class fsDownloader:
         api_key = 'd617ec8690f8cafd5d081e00a1501565e137f23e'
         dart.set_api_key(api_key=api_key)
 
-        self.log_notfound = self.setup_logger('./logs/log1', 'notfound.log', empty_formatter)
-        self.log_notmatch = self.setup_logger('./logs/log2', 'notmatch.log', empty_formatter)
-        self.log_noprofit = self.setup_logger('./logs/log3', 'noprofit.log', empty_formatter)
+        self.log_notfound = self.setup_logger('log1', './logs/notfound.log', empty_formatter)
+        self.log_notmatch = self.setup_logger('log2', './logs/notmatch.log', empty_formatter)
+        self.log_noprofit = self.setup_logger('log3', './logs/noprofit.log', empty_formatter)
         # self.log_success = self.setup_logger('log4','success.log')
-
-    def get_ignore_list(self):
-
-        ignore_list = []
-        with open('./logs/notfound.log', 'r') as f:
-            aa = f.readlines()
-            ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-        with open('./logs/notmatch.log', 'r') as f:
-            aa = f.readlines()
-            ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-        with open('./logs/noprofit.log', 'r') as f:
-            aa = f.readlines()
-            ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-        with open('./logs/ignore_list.txt', 'r') as f:
-            aa = f.readlines()
-            ignore_list += [x.rstrip().split(',')[0] for x in aa]
-
-        for f in os.listdir('./fsdata'):
-            ignore_list.append(f.split('_')[0])
-
-        return ignore_list
 
     def setup_logger(self, name, log_file, formatt, level=logging.INFO):
         """To setup as many loggers as you want"""
@@ -119,7 +127,7 @@ class fsDownloader:
     def download(self, market, begin_date_str):
         market_corp_dict = read_csv_dict(market)
         print(f'{market} has {len(list(market_corp_dict.keys()))} Corps ')
-        ignore_list = self.get_ignore_list()
+        ignore_list = get_ignore_list()
 
         for market_corp_code in market_corp_dict:
             market_corp_name = market_corp_dict[market_corp_code]
@@ -167,14 +175,20 @@ class fsDownloader:
                     dart.errors.NotFoundConsolidated,
                     dart.errors.InvalidField,
                     dart.errors.UnknownError,
+                    AttributeError,
+                    KeyError,
+                    ValueError,
                     RuntimeError) as e:
-
+                print(f'{market_corp_code},{market_corp_name},{e}')
                 self.log_notfound.info(f'{market_corp_code},{market_corp_name},{e}')
 
 
 if args.d:
     dw = fsDownloader()
-    dw.download(market=KOSPI, begin_date_str='20200101')
+    dw.download(market=args.m, begin_date_str='20200101')
 
 if args.e:
     eval()
+
+if args.t:
+    print_files_status()
