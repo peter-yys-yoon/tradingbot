@@ -172,6 +172,7 @@ class fsDownloader:
             except (dart.errors.InvalidField,
                     AttributeError,
                     KeyError,
+                    IndexError,
                     ValueError,
                     RuntimeError) as e:
                 print(f'{market_corp_code},{market_corp_name},{e}')
