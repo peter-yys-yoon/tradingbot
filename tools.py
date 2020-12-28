@@ -99,15 +99,7 @@ def read_all_logs():
         aa = f.readlines()
         flist += [x.rstrip().split(',')[0] for x in aa]
 
-    with open('./logs/notmatch.log', 'r') as f:
-        aa = f.readlines()
-        flist += [x.rstrip().split(',')[0] for x in aa]
-
-    with open('./logs/noprofit.log', 'r') as f:
-        aa = f.readlines()
-        flist += [x.rstrip().split(',')[0] for x in aa]
-
-    with open('./logs/ignore_list.txt', 'r') as f:
+    with open('./logs/noreport.log', 'r') as f:
         aa = f.readlines()
         flist += [x.rstrip().split(',')[0] for x in aa]
 

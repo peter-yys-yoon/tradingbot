@@ -26,3 +26,37 @@ Rmoved
 ['293940', '신한알파리츠'
 ['088260', '이리츠코크렙'
 ['054180', '중앙오션',
+
+
+
+--------------------------------------------------------
+Concept_id, label_en,label_kr
+
+    case1
+        - entity00913689_udf_IS_2019810144646377_StatementOfComprehensiveIncomeAbstract
+        - Net Income (Loss).
+        - 당기순이익(손실).
+    case2
+        - ifrs-full_ProfitLossAttributableToOwnersOfParent
+        - Profit (loss), attributable to owners of parent
+        - Ⅶ. 당기순이익(손실)
+
+
+
+
+
+
+
+
+
+
+--------------------------------------------------------
+
+
+
+
+
+
+
+
+

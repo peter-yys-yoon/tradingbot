@@ -20,7 +20,7 @@ def export_result(results):
         f.write('|'.join(headers) + '\n')
         print('|'.join(headers))
         for rec in results:
-            # rec2 = [fmt(rec[0], 25, 'l'), fmt(rec[1], 17, 'c')] + [fmt(vis_profit(a), 17, 'r') for a in rec[2:]]
+            rec2 = [fmt(rec[0], 25, 'l'), fmt(rec[1], 17, 'c')] + [fmt(vis_profit(a), 17, 'r') for a in rec[2:]]
             f.write('|'.join(rec2) + '\n')
             print('|'.join(rec2))
 
@@ -36,8 +36,8 @@ def check_condition(res_row):
 
 
 def eval():
-    fs_data_path = './fsdata'
-    # fs_data_path = './tmp'
+    # fs_data_path = './fsdata'
+    fs_data_path = './tmp'
 
     corp_dict = read_csv_dict(args.m)
     xlsx_list = os.listdir(fs_data_path)
@@ -54,10 +54,7 @@ def eval():
 
         corp_code = ff.split('_')[0]
 
-        # if corp_code != '091810':
-        #     continue
-
-        if corp_code not in corp_dict.keys():
+        if corp_code not in corp_dict.keys(): # specific market only
             continue
         corp_name = corp_dict[corp_code]
 
@@ -96,7 +93,8 @@ def eval():
             else:  # no column in the sheet
                 cis_profit_values.append(0)
 
-        if check_condition(cis_profit_values):
+        # if check_condition(cis_profit_values):
+        if True:
             results.append(cis_profit_values)
     name_desc.close()
     export_result(results)
@@ -108,8 +106,7 @@ class fsDownloader:
         dart.set_api_key(api_key=api_key)
 
         self.log_notfound = self.setup_logger('log1', './logs/notfound.log', empty_formatter)
-        self.log_notmatch = self.setup_logger('log2', './logs/notmatch.log', empty_formatter)
-        self.log_noprofit = self.setup_logger('log3', './logs/noprofit.log', empty_formatter)
+        self.log_noreport = self.setup_logger('log4', './logs/noreport.log', empty_formatter)
         # self.log_success = self.setup_logger('log4','success.log')
 
     def setup_logger(self, name, log_file, formatt, level=logging.INFO):
@@ -126,7 +123,6 @@ class fsDownloader:
 
     def download(self, market, begin_date_str):
         market_corp_dict = read_csv_dict(market)
-        print(f'{market} has {len(list(market_corp_dict.keys()))} Corps ')
         ignore_list = get_ignore_list()
 
         for market_corp_code in market_corp_dict:
@@ -139,42 +135,18 @@ class fsDownloader:
             try:
                 reports = dart.fs.extract(corp_code=market_corp_code,
                                           bgn_de=begin_date_str
-                                          , report_tp='quarter'
-                                          # ,report_tp='half'
-                                          )
+                                          , report_tp='quarter')
 
                 print('corp code: ', market_corp_code, ' name:', market_corp_name)
-                cis_report = reports['cis']
-                report_cis_col_label = cis_report.to_dict().keys()
-                report_cis_col_label = list(report_cis_col_label)
-
-                first_labels = cis_report[report_cis_col_label[0]]  # concept_id
-                eng_labels = cis_report[report_cis_col_label[2]]  # eng_label
-
-                # if 'Profit (loss)' not in eng_labels:
-                #     print('No Profit!!')
-
-                no_label_flag = True
-                target_idx = -1
-                for idx, lab in enumerate(eng_labels):
-                    if lab == 'Profit (loss)':
-                        no_label_flag = False
-                        target_idx = idx
-                        # print(idx, first_labels[idx], eng_labels[idx])
-
-                if no_label_flag:
-                    print('No Profit!!')
-                    self.log_noprofit.info(f'{market_corp_code},{market_corp_name}')
-                else:
-                    concept_id = first_labels[target_idx]
-                    if concept_id != 'ifrs-full_ProfitLoss':
-                        self.log_notmatch.info(f'{market_corp_code},{market_corp_name},{concept_id},{eng_labels}')
-
                 reports.save()
-            except (dart.errors.NoDataReceived,
-                    dart.errors.NotFoundConsolidated,
-                    dart.errors.InvalidField,
+
+            except (dart.errors.NotFoundConsolidated,
                     dart.errors.UnknownError,
+                    dart.errors.NoDataReceived) as e:
+                print(f'{market_corp_code},{market_corp_name},{e}')
+                self.log_noreport.info(f'{market_corp_code},{market_corp_name},{e}')
+
+            except (dart.errors.InvalidField,
                     AttributeError,
                     KeyError,
                     ValueError,
