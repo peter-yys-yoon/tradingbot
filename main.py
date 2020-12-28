@@ -12,17 +12,33 @@ import calendar
 from wcwidth import wcswidth
 from tools import *
 
+CONCEPT_ID_COL_NAME = 'concept_id'
+en_label_list = ['Profit (loss)', 'Profit']
+concept_id_list = ['ifrs-full_ProfitLoss', 'ifrs_ProfitLoss']
 
-def export_result(results):
+
+def export_result(_results, no_profit_row_corp_list, no_concept_id_corp_list):
+    filtered_results = []
+
+    for res in _results:
+        if check_condition(res):
+            filtered_results.append(res)
+
     with open(f'result_{args.m}.txt', 'w') as f:
         headers = [fmt('NAME', 25, 'c'), fmt('CODE', 17, 'c')] + [fmt(COL_NAME_DICT[aa], 17, 'c') for aa in
                                                                   REPORT_COL_LIST]
         f.write('|'.join(headers) + '\n')
         print('|'.join(headers))
-        for rec in results:
+        for rec in filtered_results:
             rec2 = [fmt(rec[0], 25, 'l'), fmt(rec[1], 17, 'c')] + [fmt(vis_profit(a), 17, 'r') for a in rec[2:]]
             f.write('|'.join(rec2) + '\n')
             print('|'.join(rec2))
+
+        for tmp in no_profit_row_corp_list:
+            f.write(', '.join(tmp)+'\n')
+
+        for tmp in no_concept_id_corp_list:
+            f.write(', '.join(tmp)+'\n')
 
 
 def check_condition(res_row):
@@ -36,8 +52,10 @@ def check_condition(res_row):
 
 
 def eval():
-    # fs_data_path = './fsdata'
-    fs_data_path = './tmp'
+    fs_data_path = './fsdata'
+    # fs_data_path = './tmp'
+    no_concept_id_corp_list = []
+    no_profit_row_corp_list = []
 
     corp_dict = read_csv_dict(args.m)
     xlsx_list = os.listdir(fs_data_path)
@@ -46,58 +64,63 @@ def eval():
     name_desc = tqdm(range(len(xlsx_list)))
     for ff in xlsx_list:
         name_desc.update(1)
+        corp_code = ff.split('_')[0]
+        if corp_code not in corp_dict.keys():  # specific market only
+            continue
 
+
+        corp_name = corp_dict[corp_code]
         fpath = f'{fs_data_path}/{ff}'
         xlsx = pd.read_excel(fpath, engine='openpyxl', sheet_name=None)
         cis_sheet = xlsx[DATA_CIS_SHEET]
         cis_sheet_cols = list(cis_sheet.keys())  # col names
+        second_cols = [cis_sheet[key][0] for key in cis_sheet_cols]
 
-        corp_code = ff.split('_')[0]
+        if CONCEPT_ID_COL_NAME in second_cols:
+            en_col_idx = second_cols.index(CONCEPT_ID_COL_NAME)  # target_column_index
+            en_col_vals = cis_sheet[cis_sheet_cols[en_col_idx]]  # target_column_values
 
-        if corp_code not in corp_dict.keys(): # specific market only
-            continue
-        corp_name = corp_dict[corp_code]
+            profit_row_idx = -1
+            for en_col_val in en_col_vals:
+                if type(en_col_val) == float:  # Some values are zero.
+                    continue
 
-        profit_idx = -1
-        label_en_list = cis_sheet[cis_sheet_cols[3]]
-        for idx, label in enumerate(label_en_list):
-            if type(label) == str:
-                if LABEL_EN_PROFIT_LOSS == label:
-                    profit_idx = idx
-                    # print(type(label), idx, label)
+                if en_col_val in concept_id_list:
+                    profit_row_idx = list(en_col_vals).index(en_col_val)
 
-        if profit_idx < 0:  # No Profit row in table
-            continue
-        # print(corp_code, corp_name)
-        cis_profit_values = [corp_name, corp_code]
-        for col_name in REPORT_COL_LIST:  # [ 2020Q3, 2020Q2,....]
-            if col_name in cis_sheet_cols:  # if col_name is in the sheet
-                if col_name in ANNUAL_REPORT_LIST:  # Q4 case
-                    c9, c12 = get_cal(col_name)
-                    cis_c12_vals = cis_sheet[c12]  # yearly-amount
-                    cis_c9_vals = cis_sheet[c9]  # 3/4 amount
-                    # print('c9', c9, 'c12', c12)
-                    profit = cis_c12_vals[profit_idx] - cis_c9_vals[profit_idx]
-                    # cis_profit_values.append(vis_profit(profit))
-                    cis_profit_values.append(profit)
+            if profit_row_idx > 0:  # concept_id 'profit-loss' exists
+                cis_profit_values = [corp_name, corp_code]
+                for col_name in REPORT_COL_LIST:  # [ 2020Q3, 2020Q2,....]
+                    if col_name in cis_sheet_cols:  # if col_name is in the sheet
+                        if col_name in ANNUAL_REPORT_LIST:  # Q4 case
+                            c9, c12 = get_cal(col_name)
+                            cis_c12_vals = cis_sheet[c12]  # yearly-amount
+                            cis_c9_vals = cis_sheet[c9]  # 3/4 amount
+                            # print('c9', c9, 'c12', c12)
+                            profit = cis_c12_vals[profit_row_idx] - cis_c9_vals[profit_row_idx]
+                            # cis_profit_values.append(vis_profit(profit))
+                            cis_profit_values.append(profit)
 
-                else:  # Q1, Q2, Q3 case
-                    cis_vals = cis_sheet[col_name]
-                    profit = cis_vals[profit_idx]
-                    if math.isnan(profit):  # col exists but value is empty
+                        else:  # Q1, Q2, Q3 case
+                            cis_vals = cis_sheet[col_name]
+                            profit = cis_vals[profit_row_idx]
+                            if math.isnan(profit):  # col exists but value is empty
+                                cis_profit_values.append(0)
+                            else:
+                                cis_profit_values.append(profit)
+                                # cis_profit_values.append(vis_profit(profit))
+
+                    else:  # no column in the sheet
                         cis_profit_values.append(0)
-                    else:
-                        cis_profit_values.append(profit)
-                        # cis_profit_values.append(vis_profit(profit))
 
-            else:  # no column in the sheet
-                cis_profit_values.append(0)
+                results.append(cis_profit_values)
+            else:  # No 'profit-loss' label
+                no_profit_row_corp_list.append([corp_name, corp_code, 'No profit-loss label'])
+        else:
+            no_concept_id_corp_list.append([corp_name, corp_code, 'No concept-id column'])
 
-        # if check_condition(cis_profit_values):
-        if True:
-            results.append(cis_profit_values)
     name_desc.close()
-    export_result(results)
+    export_result(results, no_profit_row_corp_list, no_concept_id_corp_list)
 
 
 class fsDownloader:
