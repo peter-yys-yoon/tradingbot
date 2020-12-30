@@ -35,10 +35,10 @@ def export_result(_results, no_profit_row_corp_list, no_concept_id_corp_list):
             print('|'.join(rec2))
 
         for tmp in no_profit_row_corp_list:
-            f.write(', '.join(tmp)+'\n')
+            f.write(', '.join(tmp) + '\n')
 
         for tmp in no_concept_id_corp_list:
-            f.write(', '.join(tmp)+'\n')
+            f.write(', '.join(tmp) + '\n')
 
 
 def check_condition(res_row):
@@ -67,7 +67,6 @@ def eval():
         corp_code = ff.split('_')[0]
         if corp_code not in corp_dict.keys():  # specific market only
             continue
-
 
         corp_name = corp_dict[corp_code]
         fpath = f'{fs_data_path}/{ff}'
@@ -120,7 +119,14 @@ def eval():
             no_concept_id_corp_list.append([corp_name, corp_code, 'No concept-id column'])
 
     name_desc.close()
+
+
     export_result(results, no_profit_row_corp_list, no_concept_id_corp_list)
+
+
+
+
+
 
 
 class fsDownloader:
@@ -144,6 +150,31 @@ class fsDownloader:
 
         return logger
 
+    def download_corp(self, corp_code, corp_name, save_path='./tmp', begin_date_str='20200101', report_type='quarter'):
+        try:
+            reports = dart.fs.extract(corp_code=corp_code,
+                                      bgn_de=begin_date_str
+                                      , report_tp=report_type)
+
+            print('corp code: ', corp_code, ' name:', corp_name)
+            reports.save(f'{corp_code}_{report_type}.xlsx', save_path)
+            # reports.save()
+
+        except (dart.errors.NotFoundConsolidated,
+                dart.errors.UnknownError,
+                dart.errors.NoDataReceived) as e:
+            print(f'{corp_code},{corp_name},{e}')
+            self.log_noreport.info(f'{corp_code},{corp_name},{e}')
+
+        except (dart.errors.InvalidField,
+                AttributeError,
+                KeyError,
+                IndexError,
+                ValueError,
+                RuntimeError) as e:
+            print(f'{corp_code},{corp_name},{e}')
+            self.log_notfound.info(f'{corp_code},{corp_name},{e}')
+
     def download(self, market, begin_date_str):
         market_corp_dict = read_csv_dict(market)
         ignore_list = get_ignore_list()
@@ -154,29 +185,10 @@ class fsDownloader:
             if market_corp_code in ignore_list:
                 print(market_corp_code, 'existed, pass')
                 continue
-
-            try:
-                reports = dart.fs.extract(corp_code=market_corp_code,
-                                          bgn_de=begin_date_str
-                                          , report_tp='quarter')
-
-                print('corp code: ', market_corp_code, ' name:', market_corp_name)
-                reports.save()
-
-            except (dart.errors.NotFoundConsolidated,
-                    dart.errors.UnknownError,
-                    dart.errors.NoDataReceived) as e:
-                print(f'{market_corp_code},{market_corp_name},{e}')
-                self.log_noreport.info(f'{market_corp_code},{market_corp_name},{e}')
-
-            except (dart.errors.InvalidField,
-                    AttributeError,
-                    KeyError,
-                    IndexError,
-                    ValueError,
-                    RuntimeError) as e:
-                print(f'{market_corp_code},{market_corp_name},{e}')
-                self.log_notfound.info(f'{market_corp_code},{market_corp_name},{e}')
+            self.download_corp(market_corp_code, market_corp_name,
+                                        begin_date_str=begin_date_str,
+                                        report_type='quarter',
+                                        save_path='./fsdata')
 
 
 if args.d:
@@ -188,3 +200,10 @@ if args.e:
 
 if args.t:
     print_files_status()
+
+if args.dt:
+    dw = fsDownloader()
+    corp_dict = read_csv_dict(args.m)
+    if args.c in corp_dict.keys():
+        dw.download_corp(corp_code=args.c, corp_name= corp_dict[args.c])
+
