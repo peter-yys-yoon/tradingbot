@@ -47,6 +47,9 @@ COL_NAME_DICT = {
 REPORT_COL_LIST = [COL_2020Q3, COL_2020Q2, COL_2020Q1]
 ANNUAL_REPORT_LIST = [COL_2020Q4, COL_2019Q4]  # includes only Q4-cols.
 
+fs_data_path = './fsdata'
+report_tp_list = ['quarter']
+REPORT_TP_QUARTER='quarter'
 DATA_CIS_SHEET = 'Data_cis'
 CONCEPT_PROFIT_LOSS = 'ifrs-full_ProfitLoss'
 LABEL_EN_PROFIT_LOSS = 'Profit (loss)'
@@ -62,10 +65,18 @@ MARKET_TP = {
 }
 
 parser = argparse.ArgumentParser(description='wowwowwowwow')
-parser.add_argument('-d', action='store_true')
-parser.add_argument('-e', action='store_true')
-parser.add_argument('-t', action='store_true')
-parser.add_argument('-m', type=str, default='kospi', action='store')
+parser.add_argument('-d', action='store_true', help='download all')
+parser.add_argument('-e', action='store_true', help='evaluate all')
+parser.add_argument('-t', action='store_true', help='count files')
+parser.add_argument('-s', action='store_true', help='save eval result in text')
+parser.add_argument('-cd1', action='store_true', help='Condition1, print all')
+parser.add_argument('-cd2', action='store_true', help='Condition2, positive profit last 3 quraters')
+
+parser.add_argument('-v', action='store_true', help='vis in terminal')
+parser.add_argument('-dt', action='store_true', help='download test, requires -m, -c')
+parser.add_argument('-et', action='store_true', help='eval test, requires -c')
+parser.add_argument('-m', type=str, default='kospi', action='store', help='market: kospi|kosdaq')
+parser.add_argument('-c', type=str, default='kospi', action='store', help='Corp code')
 args = parser.parse_args()
 
 
