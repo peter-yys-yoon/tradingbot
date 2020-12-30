@@ -10,7 +10,7 @@ Downloads report from DART with official API.
 
 
 # Usage
-
+### Running
 - Download report of corps belong to given stock market .
 ```angular2html
     python main.py -d -m kospi
@@ -18,15 +18,32 @@ Downloads report from DART with official API.
     python main.py -d -m konex
 ```
 
-- List all coprs who has earned profit in last three quarters.
+- List all corps who has earned profit in last three quarters in specific market.
+-m Market: kospi, -s: Save in text, -v: Visualize in terminal, -cd1: conditioning
 
-    `python main.py -e -m kospi `
+    `python main.py -e -m kospi -s -v -cd1`
 
 
 - Count all files including downloaded and failed.
         
     `python main.py -t`
   
+### Conditions
+  - cd1: Earn profit in last three quarters.
+  - cd2: No condition
+
+
+### Debugging
+  
+  - Download test
+ 
+    `python main.py -dt -m kospi -c 003490`
+
+  - Evaluation test
+
+    `python main.py -et -c 003490 -cd1`
+
+
 
   # Future Work
 
